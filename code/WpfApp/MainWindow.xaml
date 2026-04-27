@@ -1,20 +1,13 @@
-<fw:AcrylicWindow x:Class="WpfApp.MainWindow"
+<Window x:Class="WpfApp.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:fw="clr-namespace:SourceChord.FluentWPF;assembly=FluentWPF"
         mc:Ignorable="d"
         Title="SSH Консоль"
         Height="700"
         Width="1000">
-    <Window.Resources>
-        <Style TargetType="Button" BasedOn="{StaticResource ButtonRevealStyle}" />
-        <Style TargetType="TextBox" BasedOn="{StaticResource TextBoxRevealStyle}" />
-        <Style TargetType="PasswordBox" BasedOn="{StaticResource PasswordBoxRevealStyle}" />
-    </Window.Resources>
-
-    <Grid Margin="12" fw:PointerTracker.Enabled="True">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -119,4 +112,4 @@
                      Padding="10" />
         </GroupBox>
     </Grid>
-</fw:AcrylicWindow>
+</Window>

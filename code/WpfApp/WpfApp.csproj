@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentWPF" Version="0.10.2" />
     <PackageReference Include="SSH.NET" Version="2025.1.0" />
   </ItemGroup>
 
