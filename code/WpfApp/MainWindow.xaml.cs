@@ -8,7 +8,7 @@ using Renci.SshNet.Common;
 
 namespace WpfApp;
 
-public partial class MainWindow : Window
+public partial class MainWindow
 {
     private SshClient? _sshClient;
     private ShellStream? _shellStream;

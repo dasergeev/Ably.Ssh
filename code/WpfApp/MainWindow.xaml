@@ -1,4 +1,4 @@
-<Window x:Class="WpfApp.MainWindow"
+<fw:AcrylicWindow x:Class="WpfApp.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -7,12 +7,7 @@
         mc:Ignorable="d"
         Title="SSH Консоль"
         Height="700"
-        Width="1000"
-        fw:AcrylicWindow.Enabled="True"
-        fw:AcrylicWindow.FallbackColor="#1D2433"
-        fw:AcrylicWindow.TintColor="#1D2433"
-        fw:AcrylicWindow.TintOpacity="0.72"
-        fw:AcrylicWindow.NoiseOpacity="0.02">
+        Width="1000">
     <Window.Resources>
         <Style TargetType="Button" BasedOn="{StaticResource ButtonRevealStyle}" />
         <Style TargetType="TextBox" BasedOn="{StaticResource TextBoxRevealStyle}" />
@@ -31,8 +26,6 @@
                 Padding="10"
                 Margin="0,0,0,10"
                 BorderThickness="1"
-                BorderBrush="#44FFFFFF"
-                Background="#1E202A"
                 CornerRadius="6">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -49,16 +42,16 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#E8ECF7" Text="IP-адрес" />
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0" Text="IP-адрес" />
                 <TextBox x:Name="HostTextBox" Grid.Column="1" Text="127.0.0.1" Margin="0,0,14,0" VerticalContentAlignment="Center" />
 
-                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#E8ECF7" Text="Порт" />
+                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="0,0,8,0" Text="Порт" />
                 <TextBox x:Name="PortTextBox" Grid.Column="3" Text="22" Margin="0,0,14,0" VerticalContentAlignment="Center" />
 
-                <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#E8ECF7" Text="Пользователь" />
+                <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0" Text="Пользователь" />
                 <TextBox x:Name="UsernameTextBox" Grid.Column="5" Margin="0,0,14,0" VerticalContentAlignment="Center" />
 
-                <TextBlock Grid.Column="6" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#E8ECF7" Text="Пароль" />
+                <TextBlock Grid.Column="6" VerticalAlignment="Center" Margin="0,0,8,0" Text="Пароль" />
                 <PasswordBox x:Name="PasswordBox" Grid.Column="7" Margin="0,0,14,0" VerticalContentAlignment="Center" />
 
                 <Button x:Name="ConnectButton"
@@ -78,7 +71,6 @@
                            Margin="16,0,0,0"
                            VerticalAlignment="Center"
                            FontWeight="SemiBold"
-                           Foreground="#8FC0FF"
                            Text="Отключено" />
             </Grid>
         </Border>
@@ -92,10 +84,6 @@
                  HorizontalScrollBarVisibility="Auto"
                  FontFamily="Consolas"
                  FontSize="13"
-                 Background="#0A111C"
-                 Foreground="#E6E6E6"
-                 BorderBrush="#3E4A63"
-                 BorderThickness="1"
                  Padding="10" />
 
         <Grid Grid.Row="2" Margin="0,10,0,10">
@@ -118,7 +106,7 @@
                     Click="SendCommandButton_Click" />
         </Grid>
 
-        <GroupBox Grid.Row="3" Header="Журнал" Foreground="#E8ECF7">
+        <GroupBox Grid.Row="3" Header="Журнал">
             <TextBox x:Name="JournalTextBox"
                      IsReadOnly="True"
                      AcceptsReturn="True"
@@ -127,10 +115,8 @@
                      HorizontalScrollBarVisibility="Disabled"
                      FontFamily="Consolas"
                      FontSize="12"
-                     Background="#0E1116"
-                     Foreground="#CFE3FF"
                      BorderThickness="0"
                      Padding="10" />
         </GroupBox>
     </Grid>
-</Window>
+</fw:AcrylicWindow>
