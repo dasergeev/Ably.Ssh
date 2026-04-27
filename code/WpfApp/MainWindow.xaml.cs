@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using Renci.SshNet;
@@ -61,6 +63,19 @@ public partial class MainWindow : Window
 
         try
         {
+            var probeResult = await ProbeEndpointAsync(host, port);
+            if (!probeResult.CanProceed)
+            {
+                SetStatus("Ошибка подключения");
+                AppLogger.Error(probeResult.Message);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(probeResult.Message))
+            {
+                AppLogger.Info(probeResult.Message);
+            }
+
             var connection = await Task.Run(() =>
             {
                 var authentication = new PasswordAuthenticationMethod(username, password);
@@ -270,6 +285,85 @@ public partial class MainWindow : Window
         return $"Ошибка подключения: {exception.Message}";
     }
 
+    private static async Task<ProbeResult> ProbeEndpointAsync(string host, int port)
+    {
+        try
+        {
+            using var tcpClient = new TcpClient();
+
+            using (var connectTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(4)))
+            {
+                await tcpClient.ConnectAsync(host, port, connectTimeoutCts.Token);
+            }
+
+            using var stream = tcpClient.GetStream();
+            var buffer = new byte[512];
+            var read = 0;
+
+            using (var readTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
+            {
+                try
+                {
+                    read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), readTimeoutCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return new ProbeResult(
+                        CanProceed: true,
+                        Message: $"Предпроверка {host}:{port}: TCP открыт, SSH-баннер не получен за 2 сек. Продолжаем попытку SSH.");
+                }
+            }
+
+            if (read <= 0)
+            {
+                return new ProbeResult(
+                    CanProceed: true,
+                    Message: $"Предпроверка {host}:{port}: TCP открыт, удалённый узел закрыл соединение без баннера. Продолжаем попытку SSH.");
+            }
+
+            var preview = Encoding.ASCII.GetString(buffer, 0, read);
+            var firstLine = preview.Split(["\r\n", "\n"], StringSplitOptions.None)[0];
+
+            if (preview.Contains("HTTP/", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ProbeResult(
+                    CanProceed: false,
+                    Message: $"Предпроверка {host}:{port}: получен HTTP-ответ ({firstLine}). Это не SSH-порт.");
+            }
+
+            if (preview.Contains("SSH-", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ProbeResult(
+                    CanProceed: true,
+                    Message: $"Предпроверка {host}:{port}: получен SSH-баннер ({firstLine}).");
+            }
+
+            return new ProbeResult(
+                CanProceed: true,
+                Message: $"Предпроверка {host}:{port}: нестандартный ответ ({firstLine}). Продолжаем попытку SSH.");
+        }
+        catch (OperationCanceledException)
+        {
+            return new ProbeResult(
+                CanProceed: false,
+                Message: $"Предпроверка {host}:{port}: таймаут TCP-подключения.");
+        }
+        catch (SocketException ex)
+        {
+            return new ProbeResult(
+                CanProceed: false,
+                Message: $"Предпроверка {host}:{port}: ошибка сокета ({ex.SocketErrorCode}) - {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return new ProbeResult(
+                CanProceed: false,
+                Message: $"Предпроверка {host}:{port}: ошибка проверки - {ex.Message}");
+        }
+    }
+
+    private sealed record ProbeResult(bool CanProceed, string Message);
+
     protected override void OnClosed(EventArgs e)
     {
         AppLogger.EntryAdded -= OnLogEntryAdded;
@@ -277,3 +371,4 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 }
+
