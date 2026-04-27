@@ -2,6 +2,7 @@ using System.Net;
 using System.Windows;
 using System.Windows.Input;
 using Renci.SshNet;
+using Renci.SshNet.Common;
 
 namespace WpfApp;
 
@@ -22,7 +23,7 @@ public partial class MainWindow : Window
             AppendJournalEntry(entry);
         }
 
-        AppLogger.Info("Application started.");
+        AppLogger.Info("Приложение запущено.");
     }
 
     private async void ConnectButton_Click(object sender, RoutedEventArgs e)
@@ -38,25 +39,25 @@ public partial class MainWindow : Window
 
         if (!IPAddress.TryParse(host, out _))
         {
-            AppLogger.Warn("Validation failed: invalid IP address.");
+            AppLogger.Warn("Некорректный IP-адрес.");
             return;
         }
 
         if (!int.TryParse(PortTextBox.Text.Trim(), out var port) || port is < 1 or > 65535)
         {
-            AppLogger.Warn("Validation failed: port must be in range 1..65535.");
+            AppLogger.Warn("Порт должен быть в диапазоне 1..65535.");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(username))
         {
-            AppLogger.Warn("Validation failed: user name is empty.");
+            AppLogger.Warn("Имя пользователя не указано.");
             return;
         }
 
-        SetStatus("Connecting...");
+        SetStatus("Подключение...");
         ConnectButton.IsEnabled = false;
-        AppLogger.Info($"Connecting to {host}:{port} as '{username}'.");
+        AppLogger.Info($"Подключение к {host}:{port} от имени '{username}'.");
 
         try
         {
@@ -81,17 +82,18 @@ public partial class MainWindow : Window
             _readerCts = new CancellationTokenSource();
             _ = Task.Run(() => ReadShellOutputAsync(_readerCts.Token));
 
-            AppendTerminalOutput($"[local] Connected to {host}:{port}{Environment.NewLine}");
-            SetStatus("Connected");
+            AppendTerminalOutput($"[local] Подключено к {host}:{port}{Environment.NewLine}");
+            SetStatus("Подключено");
             UpdateUi(isConnected: true);
-            AppLogger.Info("SSH session established.");
+            AppLogger.Info("SSH-сессия установлена.");
             CommandTextBox.Focus();
         }
         catch (Exception ex)
         {
             DisconnectInternal();
-            SetStatus("Connection failed");
+            SetStatus("Ошибка подключения");
             UpdateUi(isConnected: false);
+            AppLogger.Error(GetConnectionHint(ex, host, port));
             AppLogger.Exception("SSH connection failed.", ex);
         }
         finally
@@ -103,10 +105,10 @@ public partial class MainWindow : Window
     private void DisconnectButton_Click(object sender, RoutedEventArgs e)
     {
         DisconnectInternal();
-        AppendTerminalOutput($"[local] Disconnected{Environment.NewLine}");
-        SetStatus("Disconnected");
+        AppendTerminalOutput($"[local] Отключено{Environment.NewLine}");
+        SetStatus("Отключено");
         UpdateUi(isConnected: false);
-        AppLogger.Info("SSH session closed.");
+        AppLogger.Info("SSH-сессия закрыта.");
     }
 
     private void SendCommandButton_Click(object sender, RoutedEventArgs e)
@@ -135,7 +137,7 @@ public partial class MainWindow : Window
         {
             _shellStream.WriteLine(command);
             AppendTerminalOutput($"> {command}{Environment.NewLine}");
-            AppLogger.Info($"Command sent: {command}");
+            AppLogger.Info($"Команда отправлена: {command}");
             CommandTextBox.Clear();
         }
         catch (Exception ex)
@@ -156,7 +158,7 @@ public partial class MainWindow : Window
                     if (!string.IsNullOrEmpty(text))
                     {
                         await Dispatcher.InvokeAsync(() => AppendTerminalOutput(text));
-                        AppLogger.Info($"SSH output:{Environment.NewLine}{text.TrimEnd()}");
+                        AppLogger.Info($"Вывод SSH:{Environment.NewLine}{text.TrimEnd()}");
                     }
                 }
                 else
@@ -174,7 +176,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                AppLogger.Exception("SSH output reader failed.", ex);
+                AppLogger.Exception("Ошибка чтения SSH-потока.", ex);
                 break;
             }
         }
@@ -197,7 +199,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                AppLogger.Exception("Error while disconnecting SSH client.", ex);
+                AppLogger.Exception("Ошибка при отключении SSH-клиента.", ex);
             }
 
             _sshClient.Dispose();
@@ -246,6 +248,26 @@ public partial class MainWindow : Window
         var text = $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss}] [{entry.Level}] {entry.Message}{Environment.NewLine}";
         JournalTextBox.AppendText(text);
         JournalTextBox.ScrollToEnd();
+    }
+
+    private static string GetConnectionHint(Exception exception, string host, int port)
+    {
+        if (exception is SshConnectionException sshEx)
+        {
+            if (sshEx.Message.Contains("does not contain an SSH identification string", StringComparison.OrdinalIgnoreCase))
+            {
+                if (sshEx.Message.Contains("HTTP/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"На {host}:{port} отвечает HTTP(S), а не SSH. Для Proxmox SSH обычно доступен на порту 22.";
+                }
+
+                return $"На {host}:{port} не обнаружен SSH-сервер. Проверь адрес/порт и что SSH-служба запущена.";
+            }
+
+            return $"Ошибка SSH-подключения: {sshEx.Message}";
+        }
+
+        return $"Ошибка подключения: {exception.Message}";
     }
 
     protected override void OnClosed(EventArgs e)

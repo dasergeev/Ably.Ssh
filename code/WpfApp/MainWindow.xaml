@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="SSH Console"
+        Title="SSH Консоль"
         Height="700"
         Width="1000">
     <Grid Margin="12">
@@ -36,28 +36,28 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0" Text="IP" />
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0" Text="IP-адрес" />
                 <TextBox x:Name="HostTextBox" Grid.Column="1" Text="127.0.0.1" Margin="0,0,14,0" VerticalContentAlignment="Center" />
 
-                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="0,0,8,0" Text="Port" />
+                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="0,0,8,0" Text="Порт" />
                 <TextBox x:Name="PortTextBox" Grid.Column="3" Text="22" Margin="0,0,14,0" VerticalContentAlignment="Center" />
 
-                <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0" Text="User" />
+                <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0" Text="Пользователь" />
                 <TextBox x:Name="UsernameTextBox" Grid.Column="5" Margin="0,0,14,0" VerticalContentAlignment="Center" />
 
-                <TextBlock Grid.Column="6" VerticalAlignment="Center" Margin="0,0,8,0" Text="Password" />
+                <TextBlock Grid.Column="6" VerticalAlignment="Center" Margin="0,0,8,0" Text="Пароль" />
                 <PasswordBox x:Name="PasswordBox" Grid.Column="7" Margin="0,0,14,0" VerticalContentAlignment="Center" />
 
                 <Button x:Name="ConnectButton"
                         Grid.Column="8"
                         Margin="0,0,8,0"
                         Padding="14,6"
-                        Content="Connect"
+                        Content="Подключиться"
                         Click="ConnectButton_Click" />
                 <Button x:Name="DisconnectButton"
                         Grid.Column="9"
                         Padding="14,6"
-                        Content="Disconnect"
+                        Content="Отключиться"
                         Click="DisconnectButton_Click" />
 
                 <TextBlock x:Name="StatusTextBlock"
@@ -66,7 +66,7 @@
                            VerticalAlignment="Center"
                            FontWeight="SemiBold"
                            Foreground="#2F6BDE"
-                           Text="Disconnected" />
+                           Text="Отключено" />
             </Grid>
         </Border>
 
@@ -101,11 +101,11 @@
             <Button x:Name="SendCommandButton"
                     Grid.Column="1"
                     Padding="14,6"
-                    Content="Send"
+                    Content="Отправить"
                     Click="SendCommandButton_Click" />
         </Grid>
 
-        <GroupBox Grid.Row="3" Header="Journal">
+        <GroupBox Grid.Row="3" Header="Журнал">
             <TextBox x:Name="JournalTextBox"
                      IsReadOnly="True"
                      AcceptsReturn="True"
