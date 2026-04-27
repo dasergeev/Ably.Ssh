@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Threading;
+using ModernWpf;
 
 namespace WpfApp;
 
@@ -7,6 +8,7 @@ public partial class App : Application
 {
     public App()
     {
+        ThemeManager.Current.ApplicationTheme = ApplicationTheme.Dark;
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnCurrentDomainUnhandledException;
         TaskScheduler.UnobservedTaskException += OnTaskSchedulerUnobservedTaskException;

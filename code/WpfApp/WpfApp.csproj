@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ModernWpfUI" Version="0.9.6" />
     <PackageReference Include="SSH.NET" Version="2025.1.0" />
   </ItemGroup>
 
