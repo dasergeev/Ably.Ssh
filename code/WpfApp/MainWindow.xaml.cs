@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using Renci.SshNet;
@@ -16,6 +15,14 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         UpdateUi(isConnected: false);
+
+        AppLogger.EntryAdded += OnLogEntryAdded;
+        foreach (var entry in AppLogger.GetSnapshot())
+        {
+            AppendJournalEntry(entry);
+        }
+
+        AppLogger.Info("Application started.");
     }
 
     private async void ConnectButton_Click(object sender, RoutedEventArgs e)
@@ -31,24 +38,25 @@ public partial class MainWindow : Window
 
         if (!IPAddress.TryParse(host, out _))
         {
-            MessageBox.Show("Укажите корректный IP-адрес.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppLogger.Warn("Validation failed: invalid IP address.");
             return;
         }
 
         if (!int.TryParse(PortTextBox.Text.Trim(), out var port) || port is < 1 or > 65535)
         {
-            MessageBox.Show("Порт должен быть числом от 1 до 65535.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppLogger.Warn("Validation failed: port must be in range 1..65535.");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(username))
         {
-            MessageBox.Show("Укажите имя пользователя.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppLogger.Warn("Validation failed: user name is empty.");
             return;
         }
 
-        SetStatus("Подключение...");
+        SetStatus("Connecting...");
         ConnectButton.IsEnabled = false;
+        AppLogger.Info($"Connecting to {host}:{port} as '{username}'.");
 
         try
         {
@@ -73,17 +81,18 @@ public partial class MainWindow : Window
             _readerCts = new CancellationTokenSource();
             _ = Task.Run(() => ReadShellOutputAsync(_readerCts.Token));
 
-            AppendOutput($"[local] Подключено к {host}:{port}{Environment.NewLine}");
-            SetStatus("Подключено");
+            AppendTerminalOutput($"[local] Connected to {host}:{port}{Environment.NewLine}");
+            SetStatus("Connected");
             UpdateUi(isConnected: true);
+            AppLogger.Info("SSH session established.");
             CommandTextBox.Focus();
         }
         catch (Exception ex)
         {
             DisconnectInternal();
-            SetStatus("Ошибка подключения");
+            SetStatus("Connection failed");
             UpdateUi(isConnected: false);
-            MessageBox.Show($"Не удалось подключиться: {ex.Message}", "SSH", MessageBoxButton.OK, MessageBoxImage.Error);
+            AppLogger.Exception("SSH connection failed.", ex);
         }
         finally
         {
@@ -94,9 +103,10 @@ public partial class MainWindow : Window
     private void DisconnectButton_Click(object sender, RoutedEventArgs e)
     {
         DisconnectInternal();
-        AppendOutput($"[local] Отключено{Environment.NewLine}");
-        SetStatus("Отключено");
+        AppendTerminalOutput($"[local] Disconnected{Environment.NewLine}");
+        SetStatus("Disconnected");
         UpdateUi(isConnected: false);
+        AppLogger.Info("SSH session closed.");
     }
 
     private void SendCommandButton_Click(object sender, RoutedEventArgs e)
@@ -124,12 +134,13 @@ public partial class MainWindow : Window
         try
         {
             _shellStream.WriteLine(command);
-            AppendOutput($"> {command}{Environment.NewLine}");
+            AppendTerminalOutput($"> {command}{Environment.NewLine}");
+            AppLogger.Info($"Command sent: {command}");
             CommandTextBox.Clear();
         }
         catch (Exception ex)
         {
-            AppendOutput($"[local] Ошибка отправки команды: {ex.Message}{Environment.NewLine}");
+            AppLogger.Exception("Command send failed.", ex);
         }
     }
 
@@ -144,7 +155,8 @@ public partial class MainWindow : Window
                     var text = _shellStream.Read();
                     if (!string.IsNullOrEmpty(text))
                     {
-                        await Dispatcher.InvokeAsync(() => AppendOutput(text));
+                        await Dispatcher.InvokeAsync(() => AppendTerminalOutput(text));
+                        AppLogger.Info($"SSH output:{Environment.NewLine}{text.TrimEnd()}");
                     }
                 }
                 else
@@ -162,8 +174,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                await Dispatcher.InvokeAsync(() =>
-                    AppendOutput($"[local] Ошибка чтения: {ex.Message}{Environment.NewLine}"));
+                AppLogger.Exception("SSH output reader failed.", ex);
                 break;
             }
         }
@@ -184,9 +195,9 @@ public partial class MainWindow : Window
                     _sshClient.Disconnect();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore
+                AppLogger.Exception("Error while disconnecting SSH client.", ex);
             }
 
             _sshClient.Dispose();
@@ -213,14 +224,33 @@ public partial class MainWindow : Window
         StatusTextBlock.Text = status;
     }
 
-    private void AppendOutput(string text)
+    private void AppendTerminalOutput(string text)
     {
         TerminalOutputTextBox.AppendText(text);
         TerminalOutputTextBox.ScrollToEnd();
     }
 
+    private void OnLogEntryAdded(LogEntry entry)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            AppendJournalEntry(entry);
+            return;
+        }
+
+        _ = Dispatcher.InvokeAsync(() => AppendJournalEntry(entry));
+    }
+
+    private void AppendJournalEntry(LogEntry entry)
+    {
+        var text = $"[{entry.Timestamp:yyyy-MM-dd HH:mm:ss}] [{entry.Level}] {entry.Message}{Environment.NewLine}";
+        JournalTextBox.AppendText(text);
+        JournalTextBox.ScrollToEnd();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
+        AppLogger.EntryAdded -= OnLogEntryAdded;
         DisconnectInternal();
         base.OnClosed(e);
     }
