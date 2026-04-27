@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
+using ModernWpf;
 using Renci.SshNet;
 using Renci.SshNet.Common;
 
@@ -18,6 +19,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         UpdateUi(isConnected: false);
+
+        ThemeToggleSwitch.IsChecked = ThemeManager.Current.ApplicationTheme == ApplicationTheme.Light;
 
         AppLogger.EntryAdded += OnLogEntryAdded;
         foreach (var entry in AppLogger.GetSnapshot())
@@ -58,7 +61,6 @@ public partial class MainWindow : Window
         }
 
         SetStatus("Подключение...");
-        ConnectButton.IsEnabled = false;
         AppLogger.Info($"Подключение к {host}:{port} от имени '{username}'.");
 
         try
@@ -93,15 +95,14 @@ public partial class MainWindow : Window
 
             _sshClient = connection.client;
             _shellStream = connection.shell;
-
             _readerCts = new CancellationTokenSource();
             _ = Task.Run(() => ReadShellOutputAsync(_readerCts.Token));
 
             AppendTerminalOutput($"[local] Подключено к {host}:{port}{Environment.NewLine}");
             SetStatus("Подключено");
             UpdateUi(isConnected: true);
-            AppLogger.Info("SSH-сессия установлена.");
             CommandTextBox.Focus();
+            AppLogger.Info("SSH-сессия установлена.");
         }
         catch (Exception ex)
         {
@@ -110,10 +111,6 @@ public partial class MainWindow : Window
             UpdateUi(isConnected: false);
             AppLogger.Error(GetConnectionHint(ex, host, port));
             AppLogger.Exception("SSH connection failed.", ex);
-        }
-        finally
-        {
-            ConnectButton.IsEnabled = _sshClient?.IsConnected != true;
         }
     }
 
@@ -138,6 +135,28 @@ public partial class MainWindow : Window
             e.Handled = true;
             SendCommand();
         }
+    }
+
+    private void ThemeToggleSwitch_Checked(object sender, RoutedEventArgs e)
+    {
+        ThemeManager.Current.ApplicationTheme = ApplicationTheme.Light;
+        AppLogger.Info("Тема переключена: светлая.");
+    }
+
+    private void ThemeToggleSwitch_Unchecked(object sender, RoutedEventArgs e)
+    {
+        ThemeManager.Current.ApplicationTheme = ApplicationTheme.Dark;
+        AppLogger.Info("Тема переключена: тёмная.");
+    }
+
+    private void ClearTerminalButton_Click(object sender, RoutedEventArgs e)
+    {
+        TerminalOutputTextBox.Clear();
+    }
+
+    private void ClearJournalButton_Click(object sender, RoutedEventArgs e)
+    {
+        JournalTextBox.Clear();
     }
 
     private void SendCommand()
@@ -173,7 +192,6 @@ public partial class MainWindow : Window
                     if (!string.IsNullOrEmpty(text))
                     {
                         await Dispatcher.InvokeAsync(() => AppendTerminalOutput(text));
-                        AppLogger.Info($"Вывод SSH:{Environment.NewLine}{text.TrimEnd()}");
                     }
                 }
                 else
@@ -230,8 +248,6 @@ public partial class MainWindow : Window
         PortTextBox.IsEnabled = !isConnected;
         UsernameTextBox.IsEnabled = !isConnected;
         PasswordBox.IsEnabled = !isConnected;
-        ConnectButton.IsEnabled = !isConnected;
-        DisconnectButton.IsEnabled = isConnected;
         SendCommandButton.IsEnabled = isConnected;
         CommandTextBox.IsEnabled = isConnected;
     }
@@ -371,4 +387,3 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 }
-
