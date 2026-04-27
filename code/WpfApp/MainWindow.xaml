@@ -14,8 +14,6 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="6" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="6" />
             <RowDefinition Height="220" />
         </Grid.RowDefinitions>
 
@@ -66,16 +64,16 @@
                        Text="Отключено" />
         </Grid>
 
-        <TextBox x:Name="TerminalOutputTextBox"
+        <TextBox x:Name="TerminalTextBox"
                  Grid.Row="1"
-                 IsReadOnly="True"
                  AcceptsReturn="True"
                  TextWrapping="NoWrap"
                  VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Auto"
                  FontFamily="Consolas"
                  FontSize="13"
-                 Padding="10" />
+                 Padding="10"
+                 KeyDown="TerminalTextBox_KeyDown" />
 
         <GridSplitter Grid.Row="2"
                       Height="6"
@@ -85,35 +83,7 @@
                       ResizeBehavior="PreviousAndNext"
                       ShowsPreview="True" />
 
-        <Grid Grid.Row="3" Margin="0,8,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <TextBox x:Name="CommandTextBox"
-                     Grid.Column="0"
-                     Margin="0,0,8,0"
-                     VerticalContentAlignment="Center"
-                     FontFamily="Consolas"
-                     FontSize="13"
-                     KeyDown="CommandTextBox_KeyDown" />
-            <Button x:Name="SendCommandButton"
-                    Grid.Column="1"
-                    Padding="14,6"
-                    Content="Отправить"
-                    Click="SendCommandButton_Click" />
-        </Grid>
-
-        <GridSplitter Grid.Row="4"
-                      Height="6"
-                      HorizontalAlignment="Stretch"
-                      VerticalAlignment="Center"
-                      ResizeDirection="Rows"
-                      ResizeBehavior="PreviousAndNext"
-                      ShowsPreview="True" />
-
-        <Grid Grid.Row="5">
+        <Grid Grid.Row="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />

@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     private SshClient? _sshClient;
     private ShellStream? _shellStream;
     private CancellationTokenSource? _readerCts;
+    private int _inputStartIndex;
 
     public MainWindow()
     {
@@ -96,11 +97,11 @@ public partial class MainWindow : Window
             _readerCts = new CancellationTokenSource();
             _ = Task.Run(() => ReadShellOutputAsync(_readerCts.Token));
 
-            AppendTerminalOutput($"[local] Подключено к {host}:{port}{Environment.NewLine}");
+            AppendTerminalText($"[local] Подключено к {host}:{port}{Environment.NewLine}");
             SetStatus("Подключено");
             UpdateUi(isConnected: true);
             AppLogger.Info("SSH-сессия установлена.");
-            CommandTextBox.Focus();
+            TerminalTextBox.Focus();
         }
         catch (Exception ex)
         {
@@ -115,30 +116,65 @@ public partial class MainWindow : Window
     private void DisconnectButton_Click(object sender, RoutedEventArgs e)
     {
         DisconnectInternal();
-        AppendTerminalOutput($"[local] Отключено{Environment.NewLine}");
+        AppendTerminalText($"[local] Отключено{Environment.NewLine}");
         SetStatus("Отключено");
         UpdateUi(isConnected: false);
         AppLogger.Info("SSH-сессия закрыта.");
     }
 
-    private void SendCommandButton_Click(object sender, RoutedEventArgs e)
+    private void TerminalTextBox_KeyDown(object sender, KeyEventArgs e)
     {
-        SendCommand();
-    }
+        if (_sshClient?.IsConnected != true)
+        {
+            e.Handled = true;
+            return;
+        }
 
-    private void CommandTextBox_KeyDown(object sender, KeyEventArgs e)
-    {
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            SendCommand();
+            ExecuteTerminalCommand();
+            return;
+        }
+
+        if (e.Key == Key.Back && TerminalTextBox.CaretIndex <= _inputStartIndex)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Left && TerminalTextBox.CaretIndex <= _inputStartIndex)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Home)
+        {
+            TerminalTextBox.CaretIndex = _inputStartIndex;
+            e.Handled = true;
+            return;
+        }
+
+        if (TerminalTextBox.CaretIndex < _inputStartIndex)
+        {
+            TerminalTextBox.CaretIndex = TerminalTextBox.Text.Length;
         }
     }
 
-    private void SendCommand()
+    private void ExecuteTerminalCommand()
     {
-        var command = CommandTextBox.Text;
-        if (string.IsNullOrWhiteSpace(command) || _shellStream is null || _sshClient?.IsConnected != true)
+        if (_shellStream is null || _sshClient?.IsConnected != true)
+        {
+            return;
+        }
+
+        var command = GetCurrentInput();
+        TerminalTextBox.AppendText(Environment.NewLine);
+        TerminalTextBox.ScrollToEnd();
+        _inputStartIndex = TerminalTextBox.Text.Length;
+
+        if (string.IsNullOrWhiteSpace(command))
         {
             return;
         }
@@ -146,14 +182,22 @@ public partial class MainWindow : Window
         try
         {
             _shellStream.WriteLine(command);
-            AppendTerminalOutput($"> {command}{Environment.NewLine}");
             AppLogger.Info($"Команда отправлена: {command}");
-            CommandTextBox.Clear();
         }
         catch (Exception ex)
         {
             AppLogger.Exception("Command send failed.", ex);
         }
+    }
+
+    private string GetCurrentInput()
+    {
+        if (_inputStartIndex >= TerminalTextBox.Text.Length)
+        {
+            return string.Empty;
+        }
+
+        return TerminalTextBox.Text[_inputStartIndex..].TrimEnd('\r', '\n');
     }
 
     private async Task ReadShellOutputAsync(CancellationToken token)
@@ -167,7 +211,7 @@ public partial class MainWindow : Window
                     var text = _shellStream.Read();
                     if (!string.IsNullOrEmpty(text))
                     {
-                        await Dispatcher.InvokeAsync(() => AppendTerminalOutput(text));
+                        await Dispatcher.InvokeAsync(() => AppendTerminalText(text));
                     }
                 }
                 else
@@ -226,8 +270,7 @@ public partial class MainWindow : Window
         PasswordBox.IsEnabled = !isConnected;
         ConnectButton.IsEnabled = !isConnected;
         DisconnectButton.IsEnabled = isConnected;
-        SendCommandButton.IsEnabled = isConnected;
-        CommandTextBox.IsEnabled = isConnected;
+        TerminalTextBox.IsReadOnly = !isConnected;
     }
 
     private void SetStatus(string status)
@@ -235,10 +278,12 @@ public partial class MainWindow : Window
         StatusTextBlock.Text = status;
     }
 
-    private void AppendTerminalOutput(string text)
+    private void AppendTerminalText(string text)
     {
-        TerminalOutputTextBox.AppendText(text);
-        TerminalOutputTextBox.ScrollToEnd();
+        TerminalTextBox.AppendText(text);
+        TerminalTextBox.ScrollToEnd();
+        _inputStartIndex = TerminalTextBox.Text.Length;
+        TerminalTextBox.CaretIndex = _inputStartIndex;
     }
 
     private void OnLogEntryAdded(LogEntry entry)
